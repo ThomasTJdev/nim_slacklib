@@ -1,14 +1,13 @@
 #[
 
     Program: Slack app library for Nim-lang
-    Version: 0.1
     Author:  ThomasTJ (https://github.com/ThomasTJdev)
     License: MIT
 
     To use:
       import slacklib
       Include and adjust slackServerRun()
-      Run:
+      Include:
         a) waitFor slackServer.serve(slackPort, slackServerRun)
         or
         b) asyncCheck slackServer.serve(slackPort, slackServerRun)
