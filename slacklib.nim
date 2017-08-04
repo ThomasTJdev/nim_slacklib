@@ -1,20 +1,37 @@
 #[
-
     Program: Slack app library for Nim-lang
     Author:  ThomasTJ (https://github.com/ThomasTJdev)
     License: MIT
+]#      
 
-    To use:
-      import slacklib
-      Include and adjust slackServerRun()
-      Include:
-        a) waitFor slackServer.serve(slackPort, slackServerRun)
-        or
-        b) asyncCheck slackServer.serve(slackPort, slackServerRun)
-      Compile:
-        nim c -d:ssl main.nim
-        
-]#
+## This library integrates the communication with a slack app
+##
+##
+## Example
+## -------
+##
+## .. code-block::nim
+##    const msgArm = slackMsg("nimslack", "Alarms is turned on", "good", "Alarm Update", "The controller has been turned on")
+##
+##    proc slackServerRun*(slackReq: asynchttpserver.Request) {.async.} =
+##      # To change the standard port:
+##      slackPort = Port(3000)`
+##
+##      # Case the command
+##      case slackEvent(slackReq, "command"):
+##      of "/arm": 
+##        # If you need to run a proc with the arguments sent, access the 'text' field:
+##        echo slackEvent(slackReq, "text")
+##        await slackRespond(slackReq, msgArm))
+##
+##      of "/disarm":
+##        echo "DISARMED"
+##        await slackRespond(slackReq, slackMsg("#general", "nimslack", "DISARMED", "", "good", "Alarm Update", "The alarm has been disarmed"))
+##
+##      else:
+##        await slackRespond(slackReq, slackMsg("#general", "nimslack", "ERROR", "", "danget", "Alarm Update", "That command is not part of me"))  
+##
+##    waitFor slackServer.serve(slackPort, slackServerRun)
 
 
 import
@@ -29,6 +46,8 @@ var
 
 
 proc slackMsg*(channel, username, fallback, pretext, color, title, value: string): string =
+  ## Generate the slack message
+
   let jsonNode = 
     %*{"channel": channel, 
       "username": username,
@@ -51,6 +70,9 @@ proc slackMsg*(channel, username, fallback, pretext, color, title, value: string
 
 
 proc slackSend*(msg: string) {.async.} =
+  ## Sends the message as async
+  ## Connections is closed after sending
+
   if slackIncomingWebhookUrl != nil:
     var clientSlack = newAsyncHttpClient()
     clientSlack.headers = newHttpHeaders({ "Content-Type": "application/json" })
@@ -61,6 +83,12 @@ proc slackSend*(msg: string) {.async.} =
 
 
 proc slackSendSync*(msg: string): string =
+  ## Sends the message as sync
+  ##
+  ## Connections is closed after sending
+  ##
+  ## Returns the Response.body as a string
+
   if slackIncomingWebhookUrl != nil:
     var clientSlack = newHttpClient()
     clientSlack.headers = newHttpHeaders({ "Content-Type": "application/json" })
@@ -72,6 +100,11 @@ proc slackSendSync*(msg: string): string =
 
 
 proc slackVerifyConnection*(slackReq: asynchttpserver.Request) {.async.} =
+  ## Grabs the value from field with value "challenge" and
+  ## sending it right back to the client
+  ##
+  ## This is used to verify the connection to the slack app
+
   let headers = newHttpHeaders([("Content-Type","application/json")])
   let msg = %* {"challenge": parseJson(slackReq.body)["challenge"].getStr()}
   echo "Sending verification for connection"
@@ -80,6 +113,8 @@ proc slackVerifyConnection*(slackReq: asynchttpserver.Request) {.async.} =
 
 
 proc toJson(slackReq: asynchttpserver.Request): JsonNode =
+  ## Parse the Request to JsonNode
+
   var json_string = ""
   for items in split(decodeUrl(slackReq.body), "&"):
     json_string.add("\"" & split(items, "=")[0] & "\": \"" & split(items, "=")[1] & "\",\n")
@@ -88,20 +123,29 @@ proc toJson(slackReq: asynchttpserver.Request): JsonNode =
 
 
 proc slackEventString*(slackReq: asynchttpserver.Request): string =
+  ## Decodes the Request and returns a string
+
   return decodeUrl(slackReq.body)
 
 
 proc slackEventJson*(slackReq: asynchttpserver.Request): JsonNode =
+  ## Return the Request as a JsonNode
+
   return toJson(slackReq)
   
 
-proc slackRespond*(slackReq: asynchttpserver.Request, msg: string) {.async.} = 
+proc slackRespond*(slackReq: asynchttpserver.Request, msg: string) {.async.} =
+  ## Sending a message to slack. This is used for responding on
+  ## incoming messages.
+
   let headers = newHttpHeaders([("Content-Type","application/json")])
   await slackReq.respond(Http200, msg, headers)
 
 
-proc slackEvent*(slackReq: asynchttpserver.Request, value: string): string =
-  return toJson(slackReq)[value].getStr()
+proc slackEvent*(slackReq: asynchttpserver.Request, jsonKey: string): string =
+  ## Return the value from the specified jsonKey as a string
+
+  return toJson(slackReq)[jsonKey].getStr()
 
 #[
 proc slackServerRun*(slackReq: asynchttpserver.Request) {.async.} =
@@ -147,5 +191,5 @@ proc slackServerRun*(slackReq: asynchttpserver.Request) {.async.} =
 
 
   # Already know you messages? Prepare them as constants (in the top):
-  # const msgOn = $slackRepsonseMsg("nimslack", "Alarms is turned on", "good", "Alarm Update", "The controller has been turned on")
+  # const msgOn = slackMsg("nimslack", "Alarms is turned on", "good", "Alarm Update", "The controller has been turned on")
 ]#
