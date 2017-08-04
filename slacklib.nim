@@ -26,8 +26,6 @@ var
   slackServer* = newAsyncHttpServer()
   slackPort* = Port(33556)
   slackIncomingWebhookUrl*: string
-  slackCommandResultString: string
-  slackCommandResultJson: JsonNode
   slackReq*: asynchttpserver.Request
 
 
@@ -91,12 +89,12 @@ proc toJson(slackReq: asynchttpserver.Request): JsonNode =
 
 
 proc slackEventString*(slackReq: asynchttpserver.Request): string =
-  slackCommandResultString = decodeUrl(slackReq.body)
+  return decodeUrl(slackReq.body)
 
 
 proc slackEventJson*(slackReq: asynchttpserver.Request): JsonNode =
-  slackCommandResultJson = toJson(slackReq)
-
+  return toJson(slackReq)
+  
 
 proc slackRespond*(slackReq: asynchttpserver.Request, msg: string) {.async.} = 
   let headers = newHttpHeaders([("Content-Type","application/json")])
@@ -112,7 +110,7 @@ proc slackServerRun*(slackReq: asynchttpserver.Request) {.async.} =
   slackPort = Port(3000)
 
 
-  # Verify you app connection. This is a one-timer, only use it for verifing connection to your app
+  # Verify you app connection. This is a one-timer, only use it for verifying connection to your app
   #slackVerifyConnection(slackReq) 
 
   
@@ -121,7 +119,11 @@ proc slackServerRun*(slackReq: asynchttpserver.Request) {.async.} =
 
 
   # Access the event in JSON
-  echo $slackEventJson(slackReq)
+  echo slackEventJson(slackReq)
+
+
+  # Access a value from the event as a string
+  echo slackEvent(slackReq, "command")
 
 
   # Case the command
